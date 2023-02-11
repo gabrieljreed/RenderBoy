@@ -4,6 +4,10 @@
 from PySide2 import QtWidgets, QtCore, QtGui
 
 from functools import partial
+import os
+
+
+iconBasePath = os.path.join(os.path.dirname(__file__), "icons")
 
 
 class RenderBoyWindow(QtWidgets.QMainWindow):
@@ -88,12 +92,18 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.layout.addWidget(self.line)
 
         self.sidebarButton = QtWidgets.QPushButton()
+        self.sidebarButton.setIcon(QtGui.QIcon(os.path.join(iconBasePath, "sidebar.svg")))
+        self.sidebarButton.setIconSize(QtCore.QSize(24, 24))
+        self.sidebarButton.setFlat(True)
         self.sidebarButton.setFixedWidth(48)
         self.sidebarButton.setFixedHeight(48)
         self.sidebarButton.clicked.connect(partial(self.updateSidebar, "shots"))
         self.gutterLayout.addWidget(self.sidebarButton)
 
         self.settingsButton = QtWidgets.QPushButton()
+        self.settingsButton.setIcon(QtGui.QIcon(os.path.join(iconBasePath, "settings.svg")))
+        self.settingsButton.setIconSize(QtCore.QSize(24, 24))
+        self.settingsButton.setFlat(True)
         self.settingsButton.setFixedWidth(48)
         self.settingsButton.setFixedHeight(48)
         self.settingsButton.clicked.connect(partial(self.updateSidebar, "settings"))
