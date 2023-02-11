@@ -1,3 +1,4 @@
 .vscode/
 .idea/
 *.pyc
+renderboy/ui/_user/projectData.json

@@ -5,6 +5,12 @@ from PySide2 import QtWidgets, QtCore, QtGui
 
 from functools import partial
 import os
+import sys
+
+renderboyPath = os.path.normpath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+sys.path.append(renderboyPath)
+
+import renderboy.data.renderTypes as rbTypes
 
 
 iconBasePath = os.path.join(os.path.dirname(__file__), "icons")
@@ -19,14 +25,18 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
 
         self.isSidebarCollapsed = False
         self.sidebarMode = "shots"
-        self.shotList = []
 
-        self.getShots()
+        self.userFolderPath = os.path.join(__file__, os.pardir, "_user")
+        if not os.path.exists(self.userFolderPath):
+            os.makedirs(self.userFolderPath)
+
+        self.projectDataPath = os.path.join(self.userFolderPath, "projectData.json")
+        if os.path.isfile(self.projectDataPath):
+            self.project = rbTypes.loadProjectFromFile(self.projectDataPath)
+        else:
+            self.project = rbTypes.Project()
+
         self.setupUI()
-
-    def getShots(self) -> None:
-        """Get the shots from the database."""
-        self.shotList = ["foo", "bar", "baz"]
 
     def setupUI(self) -> None:
         """Set up the UI."""
@@ -133,13 +143,11 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
     def clearSidebar(self):
         """Clear the sidebar."""
         # Remove all children from self.sidebarLayout
-        print("Clearing sidebar...")
         for i in reversed(range(self.sidebarLayout.count())):
             self.sidebarLayout.itemAt(i).widget().setParent(None)
 
     def setupShotsSidebar(self):
         """Set up the shots sidebar."""
-        print("Setting up shots sidebar...")
         self.clearSidebar()
 
         self.sidebarLayout.addWidget(QtWidgets.QLabel("Shots"))
@@ -153,7 +161,8 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.shotListWidget = QtWidgets.QListWidget(self)
         self.shotListWidget.setAlternatingRowColors(True)
         self.shotListWidget.setFixedWidth(198)
-        self.shotListWidget.addItems(self.shotList)
+        shotsToAdd = [shot.name for shot in self.project.shots]
+        self.shotListWidget.addItems(shotsToAdd)
         self.sidebarLayout.addWidget(self.shotListWidget)
 
         self.bottomSpacer = QtWidgets.QWidget()
@@ -163,28 +172,43 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
 
     def setupSettingsSidebar(self):
         """Set up the settings sidebar."""
-        print("Setting up settings sidebar...")
         self.clearSidebar()
 
         self.sidebarLayout.addWidget(QtWidgets.QLabel("Settings"))
-        # TODO
+
+        self.createShotsFromDirectoryButton = QtWidgets.QPushButton("Create Shots From Directory")
+        self.createShotsFromDirectoryButton.clicked.connect(self.createShotsFromDirectory)
+        self.sidebarLayout.addWidget(self.createShotsFromDirectoryButton)
+
+        self.loadProjectFromFileButton = QtWidgets.QPushButton("Load Project From File")
+        self.loadProjectFromFileButton.clicked.connect(self.loadProjectFromFile)
+        self.sidebarLayout.addWidget(self.loadProjectFromFileButton)
+
+    def createShotsFromDirectory(self):
+        """Create shots from a directory."""
+        directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Project Directory")
+        if not directory:
+            return
+
+        self.project = rbTypes.Project(directory)
+        self.shotListWidget.clear()
+        shotNames = [shot.name for shot in self.project.shots]
+        self.shotListWidget.addItems(shotNames)
+        self.writeProjectToFile()
 
     def searchShots(self):
         """Search for shots."""
-        print("Searching for shots...")
-
         if self.sidebarSearchBar.text():
             self.sidebarSearchBar.setClearButtonEnabled(True)
             self.shotListWidget.clear()
-            self.shotListWidget.addItems([shot for shot in self.shotList if self.sidebarSearchBar.text() in shot])
+            shotsToSearch = [shot.name for shot in self.project.shots]
+            self.shotListWidget.addItems([shot for shot in shotsToSearch if self.sidebarSearchBar.text() in shot])
         else:
             self.shotListWidget.clear()
-            self.shotListWidget.addItems(self.shotList)
+            self.shotListWidget.addItems([shot.name for shot in self.project.shots])
 
     def updateSidebar(self, mode):
         """Update the sidebar collapsed state and mode."""
-        print(f"Updating sidebar... {mode}")
-
         if self.isSidebarCollapsed:
             self.sidebarMode = mode
             if self.sidebarMode == "shots":
@@ -265,3 +289,21 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
             shot {str} -- The shot to update the render tab for. Defaults to None, which will clear the render tab.
         """
         pass
+
+    def writeProjectToFile(self):
+        """Write the project to a file."""
+        if self.project:
+            self.project.writeToFile(self.projectDataPath)
+
+    def loadProjectFromFile(self, filePath):
+        """Load the project from a file."""
+        self.project = rbTypes.loadProjectFromFile(filePath)
+        if self.project:
+            self.shotListWidget.clear()
+            shotNames = [shot.name for shot in self.project.shots]
+            self.shotListWidget.addItems(shotNames)
+
+    def closeEvent(self, event):
+        """Close the window and save project details."""
+        self.writeProjectToFile()
+        event.accept()
