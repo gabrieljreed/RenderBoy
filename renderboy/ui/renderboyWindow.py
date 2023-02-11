@@ -3,6 +3,8 @@
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
+from functools import partial
+
 
 class RenderBoyWindow(QtWidgets.QMainWindow):
     """RenderBoy Window."""
@@ -12,6 +14,7 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         super().__init__()
 
         self.isSidebarCollapsed = False
+        self.sidebarMode = "shots"
         self.shotList = []
 
         self.getShots()
@@ -87,12 +90,13 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.sidebarButton = QtWidgets.QPushButton()
         self.sidebarButton.setFixedWidth(48)
         self.sidebarButton.setFixedHeight(48)
-        self.sidebarButton.clicked.connect(self.updateSidebarCollapsed)
+        self.sidebarButton.clicked.connect(partial(self.updateSidebar, "shots"))
         self.gutterLayout.addWidget(self.sidebarButton)
 
         self.settingsButton = QtWidgets.QPushButton()
         self.settingsButton.setFixedWidth(48)
         self.settingsButton.setFixedHeight(48)
+        self.settingsButton.clicked.connect(partial(self.updateSidebar, "settings"))
         self.gutterLayout.addWidget(self.settingsButton)
 
     def setupSidebar(self):
@@ -110,6 +114,23 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.sidebar.setLayout(self.sidebarLayout)
 
         self.layout.addWidget(self.sidebar)
+
+        if self.sidebarMode == "shots":
+            self.setupShotsSidebar()
+        elif self.sidebarMode == "settings":
+            self.setupSettingsSidebar()
+
+    def clearSidebar(self):
+        """Clear the sidebar."""
+        # Remove all children from self.sidebarLayout
+        print("Clearing sidebar...")
+        for i in reversed(range(self.sidebarLayout.count())):
+            self.sidebarLayout.itemAt(i).widget().setParent(None)
+
+    def setupShotsSidebar(self):
+        """Set up the shots sidebar."""
+        print("Setting up shots sidebar...")
+        self.clearSidebar()
 
         self.sidebarLayout.addWidget(QtWidgets.QLabel("Shots"))
 
@@ -130,6 +151,14 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.bottomSpacer.setMinimumHeight(2)
         self.sidebarLayout.addWidget(self.bottomSpacer)
 
+    def setupSettingsSidebar(self):
+        """Set up the settings sidebar."""
+        print("Setting up settings sidebar...")
+        self.clearSidebar()
+
+        self.sidebarLayout.addWidget(QtWidgets.QLabel("Settings"))
+        # TODO
+
     def searchShots(self):
         """Search for shots."""
         print("Searching for shots...")
@@ -142,14 +171,37 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
             self.shotListWidget.clear()
             self.shotListWidget.addItems(self.shotList)
 
-    def updateSidebarCollapsed(self):
-        """Update the sidebar collapsed state."""
-        if self.isSidebarCollapsed:
-            self.sidebar.setFixedWidth(200)
-        else:
-            self.sidebar.setFixedWidth(0)
+    def updateSidebar(self, mode):
+        """Update the sidebar collapsed state and mode."""
+        print(f"Updating sidebar... {mode}")
 
-        self.isSidebarCollapsed = not self.isSidebarCollapsed
+        if self.isSidebarCollapsed:
+            self.sidebarMode = mode
+            if self.sidebarMode == "shots":
+                self.setupShotsSidebar()
+            elif self.sidebarMode == "settings":
+                self.setupSettingsSidebar()
+
+            self.sidebar.setFixedWidth(200)
+            self.isSidebarCollapsed = False
+
+        elif mode == self.sidebarMode:
+            # Update the sidebar collapsed state
+            if self.isSidebarCollapsed:
+                self.sidebar.setFixedWidth(200)
+            else:
+                self.sidebar.setFixedWidth(0)
+
+            self.isSidebarCollapsed = not self.isSidebarCollapsed
+
+        else:
+            # Update the sidebar mode
+            self.sidebarMode = mode
+
+            if self.sidebarMode == "shots":
+                self.setupShotsSidebar()
+            elif self.sidebarMode == "settings":
+                self.setupSettingsSidebar()
 
     def setupShotWidget(self):
         """Set up the shot widget."""

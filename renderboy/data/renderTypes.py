@@ -55,6 +55,7 @@ class Render:
             frameStart (int): The start frame of the render.
             frameEnd (int): The end frame of the render.
             resolution (str): The resolution of the render.
+            layers (list): The layers of the render.
         """
         self.name = ""
         self.author = ""
@@ -62,3 +63,4 @@ class Render:
         self.frameStart = 0
         self.frameEnd = 0
         self.resolution = ""
+        self.layers = []
