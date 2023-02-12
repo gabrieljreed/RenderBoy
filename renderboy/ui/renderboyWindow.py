@@ -310,7 +310,7 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
 
         self.layerNameLineEdit = QtWidgets.QLineEdit()
         self.layerNameLineEdit.setPlaceholderText("Layer Name")
-        self.layerNameLineEdit.textChanged.connect(self.renameLayer)
+        self.layerNameLineEdit.textEdited.connect(self.renameLayer)
         self.layerSettingsLayout.addWidget(self.layerNameLineEdit)
 
     def updateLayerTab(self):
@@ -422,8 +422,10 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         shot = self.project.getShot(shotName)
         layerName = self.layerListWidget.currentItem().text()
         layer = shot.getLayer(layerName)
-        layer.rename(self.layerNameLineEdit.text())  # FIXME
-        self.updateLayerTab()
+        layer.rename(self.layerNameLineEdit.text())
+
+        # Change the name in the layer list widget
+        self.layerListWidget.currentItem().setText(self.layerNameLineEdit.text())
 
     def writeProjectToFile(self):
         """Write the project to a file."""
