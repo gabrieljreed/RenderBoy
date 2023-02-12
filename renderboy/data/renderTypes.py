@@ -33,6 +33,7 @@ def loadProjectFromFile(filePath):
     """Load a project from the given file path."""
     with open(filePath, "r") as f:
         project = json.load(f, object_hook=loadRenderBoyObject)
+    project.shots.sort(key=lambda x: x.name)
     return project
 
 
@@ -77,6 +78,15 @@ class Project(RenderBoyObject):
         with open(filePath, "w") as f:
             json.dump(self, f, default=lambda o: o.__dict__, indent=4)
 
+    def getShot(self, shotName):
+        """Return the shot with the given name."""
+        for shot in self.shots:
+            if shot.name == shotName:
+                return shot
+
+        print(f"WARNING: Shot {shotName} not found.")
+        return None
+
 
 class Shot(RenderBoyObject):
     """A shot object. A shot may have 0 or more layers and renders."""
@@ -101,6 +111,32 @@ class Shot(RenderBoyObject):
         self.frameStart = 0
         self.frameEnd = 0
 
+    def addLayer(self):
+        """Add a layer to the shot."""
+        layer = Layer()
+        layer.name = f"Layer {len(self.layers) + 1}"
+        self.layers.append(layer)
+        return layer
+
+    def removeLayer(self, layerName):
+        """Remove the given layer from the shot."""
+        for layer in self.layers:
+            if layer.name == layerName:
+                del self.layers[self.layers.index(layer)]
+                return True
+
+        print(f"WARNING: Layer {layerName} not found.")
+        return False
+
+    def getLayer(self, layerName):
+        """Return the layer with the given name."""
+        for layer in self.layers:
+            if layer.name == layerName:
+                return layer
+
+        print(f"WARNING: Layer {layerName} not found.")
+        return None
+
 
 class Layer(RenderBoyObject):
     """A layer object. A shot may have 0 or more layers."""
@@ -122,6 +158,10 @@ class Layer(RenderBoyObject):
         self.exclude = []
         self.matte = []
         self.phantom = []
+
+    def rename(self, newName):
+        """Rename the layer."""
+        self.name = newName
 
 
 class Render(RenderBoyObject):

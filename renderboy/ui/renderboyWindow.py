@@ -26,7 +26,7 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.isSidebarCollapsed = False
         self.sidebarMode = "shots"
 
-        self.userFolderPath = os.path.join(__file__, os.pardir, "_user")
+        self.userFolderPath = os.path.abspath(os.path.join(__file__, os.pardir, "_user"))
         if not os.path.exists(self.userFolderPath):
             os.makedirs(self.userFolderPath)
 
@@ -162,6 +162,7 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.shotListWidget.setAlternatingRowColors(True)
         self.shotListWidget.setFixedWidth(198)
         shotsToAdd = [shot.name for shot in self.project.shots]
+        self.shotListWidget.itemClicked.connect(self.updateShotWidget)
         self.shotListWidget.addItems(shotsToAdd)
         self.sidebarLayout.addWidget(self.shotListWidget)
 
@@ -251,15 +252,112 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         self.setupLayerTab()
         self.setupRenderTab()
 
+    def updateShotWidget(self):
+        """Update the shot widget."""
+        self.updateLayerTab()
+
     def setupLayerTab(self):
         """Set up the layer tab."""
-        pass
+        self.layerLayout = QtWidgets.QHBoxLayout(self.layerTab)
+        self.layerTab.setLayout(self.layerLayout)
+        self.layerTab.setDisabled(True)
+
+        layerListWidgetHolder = QtWidgets.QWidget()
+        layerListWidgetHolder.setFixedWidth(250)
+        layerListWidgetHolderLayout = QtWidgets.QVBoxLayout(layerListWidgetHolder)
+        layerListWidgetHolderLayout.setAlignment(QtCore.Qt.AlignTop)
+        layerListWidgetHolder.setLayout(layerListWidgetHolderLayout)
+        self.layerLayout.addWidget(layerListWidgetHolder)
+
+        # ADD/REMOVE BUTTONS
+        buttonFrame = QtWidgets.QWidget()
+        buttonFrameLayout = QtWidgets.QHBoxLayout(buttonFrame)
+        buttonFrameLayout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+        buttonFrameLayout.setSpacing(0)
+        buttonFrameLayout.setContentsMargins(0, 0, 0, 0)
+        buttonFrame.setLayout(buttonFrameLayout)
+        layerListWidgetHolderLayout.addWidget(buttonFrame)
+
+        self.addLayerButton = QtWidgets.QPushButton("+")
+        self.addLayerButton.setToolTip("Add Layer")
+        self.addLayerButton.setFixedWidth(20)
+        self.addLayerButton.setFixedHeight(20)
+        self.addLayerButton.clicked.connect(self.addLayer)
+        buttonFrameLayout.addWidget(self.addLayerButton)
+
+        self.removeLayerButton = QtWidgets.QPushButton("-")
+        self.removeLayerButton.setToolTip("Remove Layer")
+        self.removeLayerButton.setFixedWidth(20)
+        self.removeLayerButton.setFixedHeight(20)
+        self.removeLayerButton.clicked.connect(self.removeLayer)
+        buttonFrameLayout.addWidget(self.removeLayerButton)
+
+        # LIST WIDGET
+        self.layerListWidget = QtWidgets.QListWidget(self)
+        self.layerListWidget.setAlternatingRowColors(True)
+        self.layerListWidget.setFixedWidth(198)
+        self.layerListWidget.itemClicked.connect(self.updateLayerSettingsWidget)
+        layerListWidgetHolderLayout.addWidget(self.layerListWidget)
+
+        # SETTINGS WIDGET
+        self.layerSettingsWidget = QtWidgets.QWidget()
+        self.layerSettingsLayout = QtWidgets.QVBoxLayout(self.layerSettingsWidget)
+        self.layerSettingsLayout.setAlignment(QtCore.Qt.AlignTop)
+        self.layerSettingsWidget.setLayout(self.layerSettingsLayout)
+        self.layerLayout.addWidget(self.layerSettingsWidget)
+
+        self.layerSettingsLayout.addWidget(QtWidgets.QLabel("Layer Settings"))
+
+        self.layerNameLineEdit = QtWidgets.QLineEdit()
+        self.layerNameLineEdit.setPlaceholderText("Layer Name")
+        self.layerNameLineEdit.textChanged.connect(self.renameLayer)
+        self.layerSettingsLayout.addWidget(self.layerNameLineEdit)
+
+    def updateLayerTab(self):
+        """Update the layer tab."""
+        # Get the currently selected shot
+        if not self.shotListWidget.currentItem():
+            self.layerListWidget.clear()
+            self.layerTab.setDisabled(True)
+            return
+
+        self.layerTab.setDisabled(False)
+        shotName = self.shotListWidget.currentItem().text()
+        shot = self.project.getShot(shotName)
+
+        # Update the layer list widget
+        self.layerListWidget.clear()
+        layerNames = [layer.name for layer in shot.layers]
+        self.layerListWidget.addItems(layerNames)
+
+    def updateLayerSettingsWidget(self):
+        """Update the layer settings widget."""
+        if not self.shotListWidget.currentItem():
+            self.layerListWidget.clear()
+            self.layerTab.setDisabled(True)
+            return
+
+        if not self.layerListWidget.currentItem():
+            self.layerSettingsWidget.setDisabled(True)
+            return
+
+        self.layerSettingsWidget.setDisabled(False)
+
+        shotName = self.shotListWidget.currentItem().text()
+        shot = self.project.getShot(shotName)
+
+        layerName = self.layerListWidget.currentItem().text()
+        layer = shot.getLayer(layerName)
+
+        self.layerNameLineEdit.setText(layer.name)
+
 
     def setupRenderTab(self):
         """Set up the render tab."""
         self.renderTabLayout = QtWidgets.QVBoxLayout(self.renderTab)
         self.renderTab.setLayout(self.renderTabLayout)
         self.renderTabLayout.setAlignment(QtCore.Qt.AlignTop)
+        self.renderTab.setDisabled(True)
 
         self.renderTabLayout.addWidget(QtWidgets.QLabel("Renders"))
 
@@ -289,6 +387,43 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
             shot {str} -- The shot to update the render tab for. Defaults to None, which will clear the render tab.
         """
         pass
+
+    def addLayer(self):
+        """Add a layer to the current shot."""
+        if not self.shotListWidget.currentItem():
+            return
+
+        shotName = self.shotListWidget.currentItem().text()
+        shot = self.project.getShot(shotName)
+        shot.addLayer()
+        self.updateLayerTab()
+
+    def removeLayer(self):
+        """Remove a layer from the current shot."""
+        if not self.shotListWidget.currentItem():
+            return
+        if not self.layerListWidget.currentItem():
+            return
+
+        shotName = self.shotListWidget.currentItem().text()
+        shot = self.project.getShot(shotName)
+        currentLayer = self.layerListWidget.currentItem().text()
+        shot.removeLayer(currentLayer)
+        self.updateLayerTab()
+
+    def renameLayer(self):
+        """Rename the currently selected layer in the current shot."""
+        if not self.shotListWidget.currentItem():
+            return
+        if not self.layerListWidget.currentItem():
+            return
+
+        shotName = self.shotListWidget.currentItem().text()
+        shot = self.project.getShot(shotName)
+        layerName = self.layerListWidget.currentItem().text()
+        layer = shot.getLayer(layerName)
+        layer.rename(self.layerNameLineEdit.text())  # FIXME
+        self.updateLayerTab()
 
     def writeProjectToFile(self):
         """Write the project to a file."""
