@@ -300,18 +300,99 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         layerListWidgetHolderLayout.addWidget(self.layerListWidget)
 
         # SETTINGS WIDGET
+        self.setupLayerSettingsWidget()
+
+    def setupLayerSettingsWidget(self):
+        """Set up the layer settings widget."""
         self.layerSettingsWidget = QtWidgets.QWidget()
+        # self.layerLayout.addWidget(self.layerSettingsWidget)
+
         self.layerSettingsLayout = QtWidgets.QVBoxLayout(self.layerSettingsWidget)
         self.layerSettingsLayout.setAlignment(QtCore.Qt.AlignTop)
-        self.layerSettingsWidget.setLayout(self.layerSettingsLayout)
-        self.layerLayout.addWidget(self.layerSettingsWidget)
+        self.layerSettingsLayout.setSpacing(0)
 
-        self.layerSettingsLayout.addWidget(QtWidgets.QLabel("Layer Settings"))
+        self.layerSettingsWidget.setLayout(self.layerSettingsLayout)
+
+        self.layerSettingsLayout.addWidget(QtWidgets.QLabel("Layer Name"))
 
         self.layerNameLineEdit = QtWidgets.QLineEdit()
         self.layerNameLineEdit.setPlaceholderText("Layer Name")
         self.layerNameLineEdit.textEdited.connect(self.renameLayer)
         self.layerSettingsLayout.addWidget(self.layerNameLineEdit)
+
+        self.layerSettingsLayout.addWidget(QtWidgets.QLabel("Notes"))
+
+        self.layerNotesTextEdit = QtWidgets.QTextEdit()
+        self.layerNotesTextEdit.setFixedHeight(100)
+        self.layerNotesTextEdit.setPlaceholderText("Notes")
+        self.layerNotesTextEdit.textChanged.connect(self.updateLayerNotes)
+        self.layerSettingsLayout.addWidget(self.layerNotesTextEdit)
+
+        self.layerSettingsLayout.addWidget(QtWidgets.QLabel("Exclude"))
+
+        excludeButtonFrame, addExcludeButton, removeExcludeButton, copyExcludeButton = self.createAddRemoveCopyButtons()
+        self.layerSettingsLayout.addWidget(excludeButtonFrame)
+
+        self.excludeListWidget = QtWidgets.QListWidget()
+        self.excludeListWidget.setAlternatingRowColors(True)
+        self.excludeListWidget.setFixedHeight(98)
+        self.layerSettingsLayout.addWidget(self.excludeListWidget)
+
+        self.layerSettingsLayout.addWidget(QtWidgets.QLabel("Matte"))
+
+        matteButtonFrame, addMatteButton, removeMatteButton, copyMatteButton = self.createAddRemoveCopyButtons()
+        self.layerSettingsLayout.addWidget(matteButtonFrame)
+
+        self.matteListWidget = QtWidgets.QListWidget()
+        self.matteListWidget.setAlternatingRowColors(True)
+        self.matteListWidget.setFixedHeight(98)
+        self.layerSettingsLayout.addWidget(self.matteListWidget)
+
+        self.layerSettingsLayout.addWidget(QtWidgets.QLabel("Phantom"))
+
+        phantomButtonFrame, addPhantomButton, removePhantomButton, copyPhantomButton = self.createAddRemoveCopyButtons()
+        self.layerSettingsLayout.addWidget(phantomButtonFrame)
+
+        self.phantomListWidget = QtWidgets.QListWidget()
+        self.phantomListWidget.setAlternatingRowColors(True)
+        self.phantomListWidget.setFixedHeight(98)
+        self.layerSettingsLayout.addWidget(self.phantomListWidget)
+
+        scrollArea = QtWidgets.QScrollArea()
+        scrollArea.setWidget(self.layerSettingsWidget)
+        scrollArea.setWidgetResizable(True)
+        self.layerLayout.addWidget(scrollArea)
+
+    def createAddRemoveCopyButtons(self):
+        """Create the add, remove and copy buttons for the layer settings widget."""
+        arcButtonFrame = QtWidgets.QWidget()
+        arcButtonFrame.setFixedHeight(20)
+        arcFrameLayout = QtWidgets.QHBoxLayout(arcButtonFrame)
+        arcFrameLayout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+        arcFrameLayout.setSpacing(0)
+        arcFrameLayout.setContentsMargins(0, 0, 0, 0)
+        arcButtonFrame.setLayout(arcFrameLayout)
+
+        addExcludebutton = QtWidgets.QPushButton("+")
+        addExcludebutton.setFixedWidth(20)
+        addExcludebutton.setFixedHeight(20)
+        arcFrameLayout.addWidget(addExcludebutton)
+
+        removeExcludeButton = QtWidgets.QPushButton("-")
+        removeExcludeButton.setFixedWidth(20)
+        removeExcludeButton.setFixedHeight(20)
+        arcFrameLayout.addWidget(removeExcludeButton)
+
+        spacerWidget = QtWidgets.QWidget()
+        spacerWidget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        arcFrameLayout.addWidget(spacerWidget)
+
+        copyExcludeToClipboardButton = QtWidgets.QPushButton("Copy to clipboard")
+        copyExcludeToClipboardButton.setFixedWidth(100)
+        copyExcludeToClipboardButton.setFixedHeight(20)
+        arcFrameLayout.addWidget(copyExcludeToClipboardButton)
+
+        return arcButtonFrame, addExcludebutton, removeExcludeButton, copyExcludeToClipboardButton
 
     def updateLayerTab(self):
         """Update the layer tab."""
@@ -330,15 +411,21 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         layerNames = [layer.name for layer in shot.layers]
         self.layerListWidget.addItems(layerNames)
 
+        self.updateLayerSettingsWidget()
+
     def updateLayerSettingsWidget(self):
         """Update the layer settings widget."""
         if not self.shotListWidget.currentItem():
             self.layerListWidget.clear()
             self.layerTab.setDisabled(True)
+            self.layerNameLineEdit.setText("")
+            self.layerNotesTextEdit.setPlainText("")
             return
 
         if not self.layerListWidget.currentItem():
             self.layerSettingsWidget.setDisabled(True)
+            self.layerNameLineEdit.setText("")
+            self.layerNotesTextEdit.setPlainText("")
             return
 
         self.layerSettingsWidget.setDisabled(False)
@@ -351,6 +438,7 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
 
         self.layerNameLineEdit.setText(layer.name)
 
+        self.layerNotesTextEdit.setPlainText(layer.notes)
 
     def setupRenderTab(self):
         """Set up the render tab."""
@@ -426,6 +514,19 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
 
         # Change the name in the layer list widget
         self.layerListWidget.currentItem().setText(self.layerNameLineEdit.text())
+
+    def updateLayerNotes(self):
+        """Update the notes for the currently selected layer in the current shot."""
+        if not self.shotListWidget.currentItem():
+            return
+        if not self.layerListWidget.currentItem():
+            return
+
+        shotName = self.shotListWidget.currentItem().text()
+        shot = self.project.getShot(shotName)
+        layerName = self.layerListWidget.currentItem().text()
+        layer = shot.getLayer(layerName)
+        layer.notes = self.layerNotesTextEdit.toPlainText()
 
     def writeProjectToFile(self):
         """Write the project to a file."""
