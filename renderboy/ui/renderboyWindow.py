@@ -333,6 +333,10 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         excludeButtonFrame, addExcludeButton, removeExcludeButton, copyExcludeButton = self.createAddRemoveCopyButtons()
         self.layerSettingsLayout.addWidget(excludeButtonFrame)
 
+        addExcludeButton.clicked.connect(partial(self.addToLayerList, "exclude"))
+        removeExcludeButton.clicked.connect(partial(self.removeFromLayerList, "exclude"))
+        copyExcludeButton.clicked.connect(partial(self.copyToClipboardFromList, "exclude"))
+
         self.excludeListWidget = QtWidgets.QListWidget()
         self.excludeListWidget.setAlternatingRowColors(True)
         self.excludeListWidget.setFixedHeight(98)
@@ -343,6 +347,10 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         matteButtonFrame, addMatteButton, removeMatteButton, copyMatteButton = self.createAddRemoveCopyButtons()
         self.layerSettingsLayout.addWidget(matteButtonFrame)
 
+        addMatteButton.clicked.connect(partial(self.addToLayerList, "matte"))
+        removeMatteButton.clicked.connect(partial(self.removeFromLayerList, "matte"))
+        copyMatteButton.clicked.connect(partial(self.copyToClipboardFromList, "matte"))
+
         self.matteListWidget = QtWidgets.QListWidget()
         self.matteListWidget.setAlternatingRowColors(True)
         self.matteListWidget.setFixedHeight(98)
@@ -352,6 +360,10 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
 
         phantomButtonFrame, addPhantomButton, removePhantomButton, copyPhantomButton = self.createAddRemoveCopyButtons()
         self.layerSettingsLayout.addWidget(phantomButtonFrame)
+
+        addPhantomButton.clicked.connect(partial(self.addToLayerList, "phantom"))
+        removePhantomButton.clicked.connect(partial(self.removeFromLayerList, "phantom"))
+        copyPhantomButton.clicked.connect(partial(self.copyToClipboardFromList, "phantom"))
 
         self.phantomListWidget = QtWidgets.QListWidget()
         self.phantomListWidget.setAlternatingRowColors(True)
@@ -527,6 +539,66 @@ class RenderBoyWindow(QtWidgets.QMainWindow):
         layerName = self.layerListWidget.currentItem().text()
         layer = shot.getLayer(layerName)
         layer.notes = self.layerNotesTextEdit.toPlainText()
+
+    def addToLayerList(self, listType):
+        """Add to layer exclude, matte, or phantom list.
+
+        Arguments:
+            listType {str} -- The type of list to add to. Can be "exclude", "matte", or "phantom".
+        """
+        if listType == "exclude":
+            listWidget = self.layerExcludeListWidget
+            listToAddTo = self.layer.exclude
+        elif listType == "matte":
+            listWidget = self.layerMatteListWidget
+            listToAddTo = self.layer.matte
+        elif listType == "phantom":
+            listWidget = self.layerPhantomListWidget
+            listToAddTo = self.layer.phantom
+        else:
+            return
+
+        listToAddTo.append(f"New {listType.title()} Item")
+        listWidget.addItem(f"New {listType.title()} Item")
+
+    def removeFromLayerList(self, listType):
+        """Remove from layer exclude, matte, or phantom list.
+
+        Arguments:
+            listType {str} -- The type of list to remove from. Can be "exclude", "matte", or "phantom".
+        """
+        if listType == "exclude":
+            listWidget = self.layerExcludeListWidget
+            listToRemoveFrom = self.layer.exclude
+        elif listType == "matte":
+            listWidget = self.layerMatteListWidget
+            listToRemoveFrom = self.layer.matte
+        elif listType == "phantom":
+            listWidget = self.layerPhantomListWidget
+            listToRemoveFrom = self.layer.phantom
+        else:
+            return
+
+        for item in listWidget.selectedItems():
+            listToRemoveFrom.remove(item.text())
+            listWidget.takeItem(listWidget.row(item))
+
+    def copyToClipboardFromList(self, listType):
+        """Copy to clipboard from layer exclude, matte, or phantom list."""
+        if listType == "exclude":
+            listToCopyFrom = self.layerExcludeListWidget
+        elif listType == "matte":
+            listToCopyFrom = self.layerMatteListWidget
+        elif listType == "phantom":
+            listToCopyFrom = self.layerPhantomListWidget
+        else:
+            return
+
+        textToCopy = ""
+        for item in listToCopyFrom.selectedItems():
+            textToCopy += item.text() + " "
+
+        # TODO: Do the copy
 
     def writeProjectToFile(self):
         """Write the project to a file."""
